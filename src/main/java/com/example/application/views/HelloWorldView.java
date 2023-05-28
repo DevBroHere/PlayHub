@@ -1,32 +1,30 @@
-package com.example.application.views.main;
+package com.example.application.views;
 
-import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouteAlias;
 
-@PageTitle("Main")
-@Route(value = "")
-public class MainView extends HorizontalLayout {
-
+@Route(value = "helloworld", layout = HomeView.class)
+@PageTitle("Hello World | PlayHub")
+public class HelloWorldView extends HorizontalLayout {
     private TextField name;
     private Button sayHello;
 
-    public MainView() {
+    public HelloWorldView() {
+        setId("hello-world-view");
         name = new TextField("Your name");
         sayHello = new Button("Say hello");
+        add(name, sayHello);
+        setVerticalComponentAlignment(Alignment.END, name, sayHello);
+
+        // Handle clicks
         sayHello.addClickListener(e -> {
             Notification.show("Hello " + name.getValue());
         });
-        sayHello.addClickShortcut(Key.ENTER);
-
-        setMargin(true);
-        setVerticalComponentAlignment(Alignment.END, name, sayHello);
-
-        add(name, sayHello);
     }
-
 }
