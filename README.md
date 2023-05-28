@@ -1,7 +1,15 @@
-# My Todo
+# PlayHub
 
-This project can be used as a starting point to create your own Vaadin application with Spring Boot.
-It contains all the necessary configuration and some placeholder files to get you started.
+Project built in Vaadin framework. An app for arranging to play together.
+
+## Important notes
+
+The project uses fake SMTP server for the purpose of email-based authorization. You can download and install the simple application via this link:
+http://nilhcem.com/FakeSMTP/download.html
+The guide to email-based authorization in Vaadin: https://vaadin.com/docs/v8/framework/articles/SendingEmailFromJavaApplications
+The SMTP server should run on port 9090 in order for the application to work properly.
+
+The database is running on the postgres, you can find what endpoint and port is it in the application.properties file.
 
 ## Running the application
 
@@ -24,9 +32,6 @@ Once the JAR file is built, you can run it using
 
 ## Project structure
 
-- `MainLayout.java` in `src/main/java` contains the navigation setup (i.e., the
-  side/top bar and the main menu). This setup uses
-  [App Layout](https://vaadin.com/docs/components/app-layout).
 - `views` package in `src/main/java` contains the server-side Java views of your application.
 - `views` folder in `frontend/` contains the client-side JavaScript views of your application.
 - `themes` folder in `frontend/` contains the custom CSS styles.
