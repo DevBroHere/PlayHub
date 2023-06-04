@@ -18,6 +18,15 @@ public class Friendships {
 
     private String friendshipStatus;
 
+    public Friendships() {
+
+    }
+    public Friendships(Users user, Users friend, String friendshipStatus){
+        this.user = user;
+        this.friend = friend;
+        this.friendshipStatus = friendshipStatus;
+    }
+
     public Long getFriendshipID() { return friendshipID; }
     public String getFriendshipStatus() { return friendshipStatus; }
 

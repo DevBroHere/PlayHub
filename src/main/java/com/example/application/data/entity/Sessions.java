@@ -1,7 +1,10 @@
 package com.example.application.data.entity;
 
 import jakarta.persistence.*;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 
+import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
@@ -30,6 +33,15 @@ public class Sessions {
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date sessionDate;
+
+    public Sessions(Games game, Users owner, String sessionName, String sessionType) {
+        this.game = game;
+        this.user = owner;
+        this.sessionName = sessionName;
+        this.sessionType = sessionType;
+        this.sessionStatus = "PENDING";
+        this.sessionDate = new Timestamp(System.currentTimeMillis());
+    }
 
     public Long getSessionID() { return sessionID; }
     public String getSessionName() { return sessionName; }

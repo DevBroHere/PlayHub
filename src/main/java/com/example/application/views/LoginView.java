@@ -24,7 +24,7 @@ public class LoginView extends Div {
                 new Button("Login", event -> {
                     try {
                         authService.authenticate(username.getValue(), password.getValue());
-                        UI.getCurrent().navigate("home");
+                        UI.getCurrent().navigate("dashboard");
                     } catch (AuthService.AuthException e) {
                         Notification.show("Wrong credentials.");
                     }
