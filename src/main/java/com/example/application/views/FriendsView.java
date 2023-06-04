@@ -73,7 +73,7 @@ public class FriendsView extends VerticalLayout {
         dialog.setDraggable(true);
         dialog.setResizable(true);
 
-        dialog.setHeaderTitle("New Friend");
+        dialog.setHeaderTitle("Add new Friend");
 
         // Create the Grid
         Grid<Users> grid = createGrid();
