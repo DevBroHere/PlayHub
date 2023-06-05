@@ -43,6 +43,10 @@ public class Sessions {
         this.sessionDate = new Timestamp(System.currentTimeMillis());
     }
 
+    public Sessions() {
+
+    }
+
     public Long getSessionID() { return sessionID; }
     public String getSessionName() { return sessionName; }
     public String getSessionType() { return sessionType; }
@@ -54,6 +58,29 @@ public class Sessions {
     public void setSessionType(String sessionType) { this.sessionType = sessionType; }
     public void setSessionStatus(String sessionStatus) { this.sessionStatus = sessionStatus; }
     public void setSessionDate(Date sessionDate) {this.sessionDate = sessionDate; }
+
+    public void setUser(Users user) {
+        this.user = user;
+    }
+
+    public void setGame(Games game) {
+        this.game = game;
+    }
+
+    // metoda zwracająca informację, czy sesja jest publiczna
+
+    public Games getGame() {
+        return game;
+    }
+
+    public Users getUser() {
+        if (user == null) {
+            // Initialize the user object if it is null
+            user = new Users();
+            // You can also set initial values or perform any necessary setup here
+        }
+        return user;
+    }
 
 
 }
