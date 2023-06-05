@@ -29,6 +29,8 @@ public class Friendships {
 
     public Long getFriendshipID() { return friendshipID; }
     public String getFriendshipStatus() { return friendshipStatus; }
+    public Users getUser() { return user; }
+    public Users getFriend() { return friend; }
 
     public void setFriendshipID(Long friendshipID) { this.friendshipID = friendshipID; }
     public void setFriendshipStatus(String friendshipStatus) { this.friendshipStatus = friendshipStatus; }
