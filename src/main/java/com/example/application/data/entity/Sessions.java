@@ -1,10 +1,11 @@
+
 package com.example.application.data.entity;
 
 import jakarta.persistence.*;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.RandomStringUtils;
 
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class Sessions {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long sessionID;
 
-    @OneToOne(optional = false)
+    @ManyToOne(optional = false)
     @JoinColumn(name = "gameID")
     private Games game;
 
@@ -34,13 +35,19 @@ public class Sessions {
     @Temporal(TemporalType.TIMESTAMP)
     private Date sessionDate;
 
-    public Sessions(Games game, Users owner, String sessionName, String sessionType) {
+    private LocalDateTime sessionStart;
+
+    private String sessionPassword;
+
+    public Sessions(Games game, Users owner, String sessionName, String sessionType, LocalDateTime sessionStart, String sessionPassword) {
         this.game = game;
         this.user = owner;
         this.sessionName = sessionName;
         this.sessionType = sessionType;
-        this.sessionStatus = "PENDING";
+        this.sessionStatus = "OPEN";
         this.sessionDate = new Timestamp(System.currentTimeMillis());
+        this.sessionStart = sessionStart;
+        this.sessionPassword = sessionPassword;
     }
 
     public Sessions() {
@@ -52,12 +59,16 @@ public class Sessions {
     public String getSessionType() { return sessionType; }
     public String getSessionStatus() { return sessionStatus; }
     public Date getSessionDate() { return sessionDate; }
+    public LocalDateTime getSessionStart() { return sessionStart; }
+    public String getSessionPassword() { return sessionPassword; }
 
     public void setSessionID(Long sessionID) { this.sessionID = sessionID; }
     public void setSessionName(String sessionName) { this.sessionName = sessionName; }
     public void setSessionType(String sessionType) { this.sessionType = sessionType; }
     public void setSessionStatus(String sessionStatus) { this.sessionStatus = sessionStatus; }
-    public void setSessionDate(Date sessionDate) {this.sessionDate = sessionDate; }
+    public void setSessionDate(Date sessionDate) { this.sessionDate = sessionDate; }
+    public void setSessionStart(LocalDate sessionStart) { this.sessionStart = sessionStart.atStartOfDay(); }
+    public void setSessionPassword(String sessionPassword) { this.sessionPassword = sessionPassword; }
 
     public void setUser(Users user) {
         this.user = user;
@@ -67,20 +78,26 @@ public class Sessions {
         this.game = game;
     }
 
-    // metoda zwracająca informację, czy sesja jest publiczna
-
     public Games getGame() {
         return game;
     }
 
     public Users getUser() {
         if (user == null) {
-            // Initialize the user object if it is null
             user = new Users();
-            // You can also set initial values or perform any necessary setup here
         }
         return user;
     }
 
+    public List<SessionUsers> getSessionUsers() {
+        return sessionUsers;
+    }
 
+    public void setSessionUsers(List<SessionUsers> sessionUsers) {
+        this.sessionUsers = sessionUsers;
+    }
+
+    public String getPassword() {
+        return sessionPassword;
+    }
 }

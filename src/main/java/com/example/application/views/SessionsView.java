@@ -8,7 +8,11 @@ import com.example.application.data.repository.UserRepository;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.Checkbox;
+import com.vaadin.flow.component.datepicker.DatePicker;
+import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
@@ -17,11 +21,14 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Route(value = "sessions", layout = MainLayout.class)
@@ -74,9 +81,6 @@ public class SessionsView extends VerticalLayout {
         dialog.setCloseOnOutsideClick(false);
 
         TextField sessionNameField = new TextField("Nazwa sesji");
-        Select<SessionType> sessionTypeSelect = new Select<>();
-        sessionTypeSelect.setLabel("Rodzaj sesji");
-        sessionTypeSelect.setItems(SessionType.values());
 
         Select<Games> gameTypeSelect = new Select<>();
         gameTypeSelect.setLabel("Rodzaj gry");
@@ -84,19 +88,49 @@ public class SessionsView extends VerticalLayout {
         gameTypeSelect.setItems(gamesList);
         gameTypeSelect.setItemLabelGenerator(Games::getGameTitle);
 
+        Checkbox privateSessionCheckbox = new Checkbox("Prywatna sesja");
+        PasswordField passwordField = new PasswordField("Hasło do sesji");
+        passwordField.setVisible(false);
+
+        privateSessionCheckbox.addValueChangeListener(event -> {
+            passwordField.setVisible(event.getValue());
+        });
+
+        DateTimePicker dateTimePicker = new DateTimePicker();
+        dateTimePicker.setLabel("Data i godzina rozpoczęcia sesji");
+        dateTimePicker.setStep(Duration.ofMinutes(15));
+        dateTimePicker.setValue(LocalDateTime.now());
+
+        FormLayout formLayout = new FormLayout();
+        formLayout.add(
+                sessionNameField,
+                gameTypeSelect,
+                privateSessionCheckbox,
+                passwordField,
+                dateTimePicker
+        );
+
         Button saveButton = new Button("Zapisz");
         saveButton.addClickListener(e -> {
             String sessionName = sessionNameField.getValue();
-            SessionType sessionType = sessionTypeSelect.getValue();
             Games game = gameTypeSelect.getValue();
+            boolean isPrivateSession = privateSessionCheckbox.getValue();
+            String sessionPassword = isPrivateSession ? passwordField.getValue() : null;
+            LocalDateTime startDate = dateTimePicker.getValue();
 
-            if (sessionName.isEmpty() || sessionType == null || game == null) {
+            if (sessionName.isEmpty() || game == null || startDate == null) {
                 Notification.show("Wypełnij wszystkie pola!", 3000, Notification.Position.MIDDLE);
                 return;
             }
 
+            if (isPrivateSession && sessionPassword.isEmpty()) {
+                Notification.show("Podaj hasło do sesji prywatnej!", 3000, Notification.Position.MIDDLE);
+                return;
+            }
+
             Users user = getCurrentUser();
-            Sessions session = new Sessions(game, user, sessionName, sessionType.name());
+            Sessions session = new Sessions(game, user, sessionName, isPrivateSession ? "PRIVATE" : "PUBLIC", startDate, sessionPassword);
+            session.setSessionPassword(sessionPassword);
             sessionRepository.save(session);
 
             SessionUsers sessionUser = new SessionUsers();
@@ -111,7 +145,7 @@ public class SessionsView extends VerticalLayout {
         Button cancelButton = new Button("Anuluj");
         cancelButton.addClickListener(e -> dialog.close());
 
-        dialog.add(sessionNameField, sessionTypeSelect, gameTypeSelect, new HorizontalLayout(saveButton, cancelButton));
+        dialog.add(formLayout, new HorizontalLayout(saveButton, cancelButton));
         dialog.open();
     }
 
@@ -137,7 +171,13 @@ public class SessionsView extends VerticalLayout {
                 buttonLayout.addClassName("joined-session");
             }
 
-            joinButton.addClickListener(e -> joinSession(session, currentUser, joinButton, buttonLayout));
+            joinButton.addClickListener(e -> {
+                if (session.getSessionType().equals("PRIVATE")) {
+                    showJoinPrivateSessionDialog(session, currentUser, joinButton, buttonLayout);
+                } else {
+                    joinSession(session, currentUser, joinButton, buttonLayout, null);
+                }
+            });
             buttonLayout.add(joinButton);
             return buttonLayout;
         }).setHeader(createButtonHeader());
@@ -145,11 +185,34 @@ public class SessionsView extends VerticalLayout {
         sessionsGrid.setVisible(true);
     }
 
+    private void showJoinPrivateSessionDialog(Sessions session, Users user, Button joinButton, HorizontalLayout buttonLayout) {
+        Dialog dialog = new Dialog();
+        dialog.setCloseOnOutsideClick(false);
+
+        PasswordField passwordField = new PasswordField("Hasło do sesji");
+
+        Button joinPrivateButton = new Button("Dołącz");
+        joinPrivateButton.addClickListener(e -> {
+            String sessionPassword = passwordField.getValue();
+            if (sessionPassword.equals(session.getSessionPassword())) {
+                joinSession(session, user, joinButton, buttonLayout, dialog);
+            } else {
+                Notification.show("Nieprawidłowe hasło do sesji!", 3000, Notification.Position.MIDDLE);
+            }
+        });
+
+        Button cancelButton = new Button("Anuluj");
+        cancelButton.addClickListener(e -> dialog.close());
+
+        dialog.add(passwordField, new HorizontalLayout(joinPrivateButton, cancelButton));
+        dialog.open();
+    }
+
     private Users getCurrentUser() {
         return VaadinSession.getCurrent().getAttribute(Users.class);
     }
 
-    private void joinSession(Sessions session, Users user, Button joinButton, HorizontalLayout buttonLayout) {
+    private void joinSession(Sessions session, Users user, Button joinButton, HorizontalLayout buttonLayout, Dialog dialog) {
         SessionUsers sessionUser = new SessionUsers();
         sessionUser.setSession(session);
         sessionUser.setUser(user);
@@ -160,6 +223,10 @@ public class SessionsView extends VerticalLayout {
         buttonLayout.addClassName("joined-session");
 
         Notification.show("Dołączono do sesji!", 3000, Notification.Position.MIDDLE);
+
+        if (dialog != null) {
+            dialog.close();
+        }
     }
 
     private Component createButtonHeader() {
