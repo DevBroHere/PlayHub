@@ -40,4 +40,5 @@ public class SessionUsers {
         this.user = user;
     }
 
+
 }

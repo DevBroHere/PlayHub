@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -89,9 +91,9 @@ public class Sessions {
         return user;
     }
 
-    public List<SessionUsers> getSessionUsers() {
-        return sessionUsers;
-    }
+//    //public List<SessionUsers> getSessionUsers() {
+//        return sessionUsers;
+//    }
 
     public void setSessionUsers(List<SessionUsers> sessionUsers) {
         this.sessionUsers = sessionUsers;
@@ -100,4 +102,21 @@ public class Sessions {
     public String getPassword() {
         return sessionPassword;
     }
+
+    public List<Users> getSessionUsers() {
+        if (sessionUsers == null) {
+            return Collections.emptyList();
+        }
+
+        List<Users> users = new ArrayList<>();
+        for (SessionUsers sessionUser : sessionUsers) {
+            Users user = sessionUser.getUser();
+            if (user != null) {
+                users.add(user);
+            }
+        }
+        return users;
+    }
+
+
 }

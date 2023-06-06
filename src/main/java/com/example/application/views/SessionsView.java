@@ -9,7 +9,6 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
-import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -18,6 +17,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
@@ -61,6 +61,7 @@ public class SessionsView extends VerticalLayout {
         sessionsGrid = new Grid<>();
         sessionsGrid.addColumn(Sessions::getSessionName).setHeader("Nazwa sesji");
         sessionsGrid.addColumn(session -> session.getGame().getGameTitle()).setHeader("Rodzaj gry");
+        sessionsGrid.addColumn(session -> session.getGame().getPlatformType()).setHeader("Typ platformy");
         sessionsGrid.addColumn(session -> session.getUser().getUserName()).setHeader("Założyciel");
         sessionsGrid.setVisible(false);
         add(sessionsGrid);
@@ -82,11 +83,21 @@ public class SessionsView extends VerticalLayout {
 
         TextField sessionNameField = new TextField("Nazwa sesji");
 
-        Select<Games> gameTypeSelect = new Select<>();
+        Select<String> gameTypeSelect = new Select<>();
         gameTypeSelect.setLabel("Rodzaj gry");
-        List<Games> gamesList = gameRepository.findAll();
-        gameTypeSelect.setItems(gamesList);
-        gameTypeSelect.setItemLabelGenerator(Games::getGameTitle);
+        List<String> gameTypes = gameRepository.findDistinctGameTitle();
+        gameTypeSelect.setItems(gameTypes);
+
+        Select<String> platformSelect = new Select<>();
+        platformSelect.setLabel("Typ platformy");
+        platformSelect.setEnabled(false); // początkowo pole jest nieaktywne
+
+        gameTypeSelect.addValueChangeListener(event -> {
+            String selectedGame = event.getValue();
+            List<String> platformList = gameRepository.findDistinctPlatformTypesByGameTitle(selectedGame);
+            platformSelect.setItems(platformList);
+            platformSelect.setEnabled(true); // aktywuj pole po wybraniu gry
+        });
 
         Checkbox privateSessionCheckbox = new Checkbox("Prywatna sesja");
         PasswordField passwordField = new PasswordField("Hasło do sesji");
@@ -105,6 +116,7 @@ public class SessionsView extends VerticalLayout {
         formLayout.add(
                 sessionNameField,
                 gameTypeSelect,
+                platformSelect,
                 privateSessionCheckbox,
                 passwordField,
                 dateTimePicker
@@ -113,18 +125,26 @@ public class SessionsView extends VerticalLayout {
         Button saveButton = new Button("Zapisz");
         saveButton.addClickListener(e -> {
             String sessionName = sessionNameField.getValue();
-            Games game = gameTypeSelect.getValue();
+            String gameType = gameTypeSelect.getValue();
+            String platformType = platformSelect.getValue();
             boolean isPrivateSession = privateSessionCheckbox.getValue();
             String sessionPassword = isPrivateSession ? passwordField.getValue() : null;
             LocalDateTime startDate = dateTimePicker.getValue();
 
-            if (sessionName.isEmpty() || game == null || startDate == null) {
+            if (sessionName.isEmpty() || gameType == null || platformType == null || startDate == null) {
                 Notification.show("Wypełnij wszystkie pola!", 3000, Notification.Position.MIDDLE);
                 return;
             }
 
             if (isPrivateSession && sessionPassword.isEmpty()) {
                 Notification.show("Podaj hasło do sesji prywatnej!", 3000, Notification.Position.MIDDLE);
+                return;
+            }
+
+            Games game = gameRepository.findFirstByGameTitleAndPlatformType(gameType, platformType);
+
+            if (game == null) {
+                Notification.show("Nie znaleziono gry o wybranych parametrach!", 3000, Notification.Position.MIDDLE);
                 return;
             }
 
@@ -145,7 +165,11 @@ public class SessionsView extends VerticalLayout {
         Button cancelButton = new Button("Anuluj");
         cancelButton.addClickListener(e -> dialog.close());
 
-        dialog.add(formLayout, new HorizontalLayout(saveButton, cancelButton));
+        HorizontalLayout buttonsLayout = new HorizontalLayout(saveButton, cancelButton);
+
+        VerticalLayout dialogLayout = new VerticalLayout(formLayout, buttonsLayout);
+        dialog.add(dialogLayout);
+
         dialog.open();
     }
 
@@ -155,6 +179,7 @@ public class SessionsView extends VerticalLayout {
 
         sessionsGrid.addColumn(Sessions::getSessionName).setHeader("Nazwa sesji");
         sessionsGrid.addColumn(session -> session.getGame().getGameTitle()).setHeader("Rodzaj gry");
+        sessionsGrid.addColumn(session -> session.getGame().getPlatformType()).setHeader("Typ platformy");
         sessionsGrid.addColumn(session -> session.getUser().getUserName()).setHeader("Założyciel");
 
         Users currentUser = getCurrentUser();
