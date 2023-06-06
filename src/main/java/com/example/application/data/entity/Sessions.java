@@ -41,6 +41,10 @@ public class Sessions {
 
     private String sessionPassword;
 
+    // Default constructor
+    public Sessions(){
+
+    }
     public Sessions(Games game, Users owner, String sessionName, String sessionType, LocalDateTime sessionStart, String sessionPassword) {
         this.game = game;
         this.user = owner;
@@ -50,10 +54,6 @@ public class Sessions {
         this.sessionDate = new Timestamp(System.currentTimeMillis());
         this.sessionStart = sessionStart;
         this.sessionPassword = sessionPassword;
-    }
-
-    public Sessions() {
-
     }
 
     public Long getSessionID() { return sessionID; }
@@ -74,21 +74,6 @@ public class Sessions {
 
     public void setUser(Users user) {
         this.user = user;
-    }
-
-    public void setGame(Games game) {
-        this.game = game;
-    }
-
-    public Games getGame() {
-        return game;
-    }
-
-    public Users getUser() {
-        if (user == null) {
-            user = new Users();
-        }
-        return user;
     }
 
 //    //public List<SessionUsers> getSessionUsers() {
@@ -116,6 +101,21 @@ public class Sessions {
             }
         }
         return users;
+    }
+
+    public void setGame(Games game) {
+        this.game = game;
+    }
+
+    public Games getGame() {
+        return game;
+    }
+
+    public Users getUser() {
+        if (user == null) {
+            user = new Users();
+        }
+        return user;
     }
 
 
