@@ -34,6 +34,10 @@ public class Sessions {
     @Temporal(TemporalType.TIMESTAMP)
     private Date sessionDate;
 
+    // Default constructor
+    public Sessions(){
+
+    }
     public Sessions(Games game, Users owner, String sessionName, String sessionType) {
         this.game = game;
         this.user = owner;
@@ -54,6 +58,21 @@ public class Sessions {
     public void setSessionType(String sessionType) { this.sessionType = sessionType; }
     public void setSessionStatus(String sessionStatus) { this.sessionStatus = sessionStatus; }
     public void setSessionDate(Date sessionDate) {this.sessionDate = sessionDate; }
+
+    public void setGame(Games game) {
+        this.game = game;
+    }
+
+    public Games getGame() {
+        return game;
+    }
+
+    public Users getUser() {
+        if (user == null) {
+            user = new Users();
+        }
+        return user;
+    }
 
 
 }

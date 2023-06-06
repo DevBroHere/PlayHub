@@ -23,7 +23,7 @@ public class ActivationView extends VerticalLayout implements BeforeEnterObserve
     private final AuthService authService;
 
     public ActivationView(AuthService authService) {
-        setId("login-view");
+        setId("activate-view");
         setSizeFull();
         setAlignItems(Alignment.CENTER);
         setJustifyContentMode(JustifyContentMode.CENTER);

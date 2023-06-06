@@ -3,6 +3,7 @@ package com.example.application.views;
 import com.example.application.data.entity.Users;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.Unit;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -12,6 +13,7 @@ import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.page.Page;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsVariant;
@@ -24,21 +26,26 @@ import java.util.Optional;
 
 @Route("mainlayout")
 public class MainLayout extends AppLayout {
-    private final Tabs menu;
+    private Tabs menu;
     public MainLayout() {
-        H1 title = new H1("PlayHub");
-        title.getStyle().set("font-size", "var(--lumo-font-size-l)")
-                .set("left", "var(--lumo-space-l)").set("margin", "0")
-                .set("position", "absolute");
+        try {
+            H1 title = new H1("PlayHub");
+            title.getStyle().set("font-size", "var(--lumo-font-size-l)")
+                    .set("left", "var(--lumo-space-l)").set("margin", "0")
+                    .set("position", "absolute");
 
-       H1 welcomeTitle = new H1("Welcome " + VaadinSession.getCurrent().getAttribute(Users.class).getUserName());
-        welcomeTitle.getStyle().set("font-size", "var(--lumo-font-size-l)")
-                .set("right", "var(--lumo-space-l)").set("margin", "3")
-                .set("position", "absolute");
+            H1 welcomeTitle = new H1("Welcome " + VaadinSession.getCurrent().getAttribute(Users.class).getUserName());
+            welcomeTitle.getStyle().set("font-size", "var(--lumo-font-size-l)")
+                    .set("right", "var(--lumo-space-l)").set("margin", "3")
+                    .set("position", "absolute");
 
-        menu = createMenu();
+            menu = createMenu();
 
-        addToNavbar(title, welcomeTitle, menu);
+            addToNavbar(title, welcomeTitle, menu);
+
+        } catch (Exception NullPointerException) {
+            UI.getCurrent().getPage().setLocation("goback");
+        }
 
     }
 
@@ -51,10 +58,21 @@ public class MainLayout extends AppLayout {
     }
 
     private Component[] createMenuItems() {
-        return new Tab[] { createTab("Dashboard", DashboardView.class),
-                createTab("Sessions", SessionsView.class),
-                createTab("Friends", FriendsView.class),
-                createTab("Logout", LogoutView.class)};
+        if (VaadinSession.getCurrent()
+                .getAttribute(Users.class).getUserRole().name().equals("ADMIN")) {
+            return new Tab[] { createTab("Dashboard", DashboardView.class),
+                    createTab("Sessions", SessionsView.class),
+                    createTab("Friends", FriendsView.class),
+                    createTab("Admin", AdminView.class),
+                    createTab("Logout", LogoutView.class)};
+        }
+        else {
+            return new Tab[] { createTab("Dashboard", DashboardView.class),
+                    createTab("Sessions", SessionsView.class),
+                    createTab("Friends", FriendsView.class),
+                    createTab("Logout", LogoutView.class)};
+        }
+
     }
 
     private static Tab createTab(String text,
@@ -67,10 +85,15 @@ public class MainLayout extends AppLayout {
 
     @Override
     protected void afterNavigation() {
-        super.afterNavigation();
+        try {
+            super.afterNavigation();
 
-        // Select the tab corresponding to currently shown view
-        getTabForComponent(getContent()).ifPresent(menu::setSelectedTab);
+            // Select the tab corresponding to currently shown view
+            getTabForComponent(getContent()).ifPresent(menu::setSelectedTab);
+        } catch (Exception NullPointerException) {
+            UI.getCurrent().getPage().setLocation("goback");
+        }
+
 
         // Set the view title in the header
 //        viewTitle.setText(getCurrentPageTitle());

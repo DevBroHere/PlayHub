@@ -25,4 +25,8 @@ public interface UserRepository extends JpaRepository<Users, Integer> {
     "AND u.userID != :userId " +
     "AND u.userID IN (SELECT f.friend FROM Friendships f WHERE f.user.userID = :userId)")
     List<Users> findFriendActiveUsers(@Param("userId") Long userId);
+
+    @Query("SELECT u FROM Users u " +
+    "WHERE u.userRole = 'USER'")
+    List<Users> findAllNotAdmins();
 }
