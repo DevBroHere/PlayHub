@@ -6,6 +6,7 @@ import com.example.application.data.entity.Role;
 import com.example.application.data.entity.Users;
 import com.example.application.data.repository.LogRepository;
 import com.example.application.data.repository.UserRepository;
+import com.example.application.views.HomeView;
 import com.example.application.views.MainLayout;
 import com.example.application.views.LogoutView;
 import com.vaadin.flow.component.Component;
@@ -77,14 +78,13 @@ public class AuthService {
         var routes = new ArrayList<AuthorizedRoute>();
 
         if (role.equals(Role.USER)) {
-//            routes.add(new AuthorizedRoute("home", "Home", HomeView.class));
+            routes.add(new AuthorizedRoute("", "Home", HomeView.class));
             routes.add(new AuthorizedRoute("logout", "Logout", LogoutView.class));
 //            routes.add(new AuthorizedRoute("mysessions", "My Sessions", MySessionsView.class));
             routes.add(new AuthorizedRoute("mainlayout", "Main layout", MainLayout.class));
 
         } else if (role.equals(Role.ADMIN)) {
-//            routes.add(new AuthorizedRoute("home", "Home", HomeView.class));
-//            routes.add(new AuthorizedRoute("admin", "Admin", AdminView.class));
+            routes.add(new AuthorizedRoute("", "Home", HomeView.class));
             routes.add(new AuthorizedRoute("logout", "Logout", LogoutView.class));
 //            routes.add(new AuthorizedRoute("mysessions", "My Sessions", MySessionsView.class));
             routes.add(new AuthorizedRoute("mainlayout", "Main layout", MainLayout.class));
