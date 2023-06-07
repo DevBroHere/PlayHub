@@ -1,15 +1,15 @@
 package com.example.application.views;
 
 import com.example.application.data.entity.Users;
-import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.ComponentUtil;
-import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.Unit;
+import com.vaadin.flow.component.*;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -29,19 +29,30 @@ public class MainLayout extends AppLayout {
     private Tabs menu;
     public MainLayout() {
         try {
+            DrawerToggle toggle = new DrawerToggle();
+            // Configure the custom CSS styles
+//            Html contentHtmlNavbar = new Html(
+//                    "<style>" +
+//                            "vaadin-app-layout::part(navbar) {" +
+//                            "background-color: #67597a;" +
+//                            "</style>"
+//            );
+//            Html contentHtmlDrawer = new Html(
+//                    "<style>" +
+//                            "vaadin-app-layout::part(drawer) {" +
+//                            "background-color: #67597a;" +
+//                            "</style>"
+//            );
+
             H1 title = new H1("PlayHub");
             title.getStyle().set("font-size", "var(--lumo-font-size-l)")
-                    .set("left", "var(--lumo-space-l)").set("margin", "0")
-                    .set("position", "absolute");
-
-            H1 welcomeTitle = new H1("Welcome " + VaadinSession.getCurrent().getAttribute(Users.class).getUserName());
-            welcomeTitle.getStyle().set("font-size", "var(--lumo-font-size-l)")
-                    .set("right", "var(--lumo-space-l)").set("margin", "3")
-                    .set("position", "absolute");
+                    .set("margin", "0");
 
             menu = createMenu();
+            addToDrawer(menu);
+            addToNavbar(toggle, title);
 
-            addToNavbar(title, welcomeTitle, menu);
+            setPrimarySection(Section.DRAWER);
 
         } catch (Exception NullPointerException) {
             UI.getCurrent().getPage().setLocation("goback");
@@ -51,34 +62,43 @@ public class MainLayout extends AppLayout {
 
     private Tabs createMenu() {
         final Tabs tabs = new Tabs();
-        tabs.getStyle().set("margin", "auto");
-        tabs.setId("tabs");
         tabs.add(createMenuItems());
+        tabs.setOrientation(Tabs.Orientation.VERTICAL);
         return tabs;
     }
 
     private Component[] createMenuItems() {
         if (VaadinSession.getCurrent()
                 .getAttribute(Users.class).getUserRole().name().equals("ADMIN")) {
-            return new Tab[] { createTab("Dashboard", DashboardView.class),
-                    createTab("Sessions", SessionsView.class),
-                    createTab("Friends", FriendsView.class),
-                    createTab("Admin", AdminView.class),
-                    createTab("Logout", LogoutView.class)};
+            return new Tab[] {
+                    createTab(VaadinIcon.DASHBOARD, "Dashboard", DashboardView.class),
+                    createTab(VaadinIcon.LIST, "Sessions", SessionsView.class),
+                    createTab(VaadinIcon.USER_HEART, "Friends", FriendsView.class),
+                    createTab(VaadinIcon.RECORDS, "Admin", AdminView.class),
+                    createTab(VaadinIcon.POWER_OFF, "Logout", LogoutView.class)};
         }
         else {
-            return new Tab[] { createTab("Dashboard", DashboardView.class),
-                    createTab("Sessions", SessionsView.class),
-                    createTab("Friends", FriendsView.class),
-                    createTab("Logout", LogoutView.class)};
+            return new Tab[] {
+                    createTab(VaadinIcon.DASHBOARD, "Dashboard", DashboardView.class),
+                    createTab(VaadinIcon.LIST, "Sessions", SessionsView.class),
+                    createTab(VaadinIcon.USER_HEART, "Friends", FriendsView.class),
+                    createTab(VaadinIcon.POWER_OFF, "Logout", LogoutView.class)};
         }
 
     }
 
-    private static Tab createTab(String text,
+    private static Tab createTab(VaadinIcon viewIcon, String text,
                                  Class<? extends Component> navigationTarget) {
+        Icon icon = viewIcon.create();
+        icon.getStyle().set("box-sizing", "border-box")
+                .set("margin-inline-end", "var(--lumo-space-m)")
+                .set("margin-inline-start", "var(--lumo-space-xs)")
+                .set("padding", "var(--lumo-space-xs)");
+
         final Tab tab = new Tab();
-        tab.add(new RouterLink(text, navigationTarget));
+        RouterLink link = new RouterLink(navigationTarget);
+        link.add(icon, new Span(text));
+        tab.add(link);
         ComponentUtil.setData(tab, Class.class, navigationTarget);
         return tab;
     }

@@ -20,7 +20,7 @@ public class Users{
     private String userRole;
     private String activationCode;
     private boolean active;
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<SessionUsers> sessionUsers;
 
     public Users() {
