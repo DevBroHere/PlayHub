@@ -62,6 +62,8 @@ public class DashboardView extends VerticalLayout {
         // Adding Rows to the Dashboard View
         add(firstRow);
         setWidthFull();
+
+        checkAndUpdateSessionStatus(userId);
     }
 
     private Div createUserInfoTile(String username, Long userId) {
@@ -79,10 +81,15 @@ public class DashboardView extends VerticalLayout {
 
         // Fetching user statistics
         TypedQuery<Long> gamesPlayedQuery = entityManager.createQuery(
-                "SELECT COUNT(su) FROM SessionUsers su WHERE su.user.userID = :userId",
+                "SELECT COUNT(DISTINCT su.session) " +
+                        "FROM SessionUsers su " +
+                        "JOIN su.session s " +
+                        "WHERE su.user.userID = :userId " +
+                        "AND s.sessionStatus = :finishedStatus",
                 Long.class
         );
         gamesPlayedQuery.setParameter("userId", userId);
+        gamesPlayedQuery.setParameter("finishedStatus", "FINISHED");
         Long gamesPlayed = gamesPlayedQuery.getSingleResult();
 
         TypedQuery<String> favoriteGameQuery = entityManager.createQuery(
@@ -103,17 +110,17 @@ public class DashboardView extends VerticalLayout {
         String favoriteGame = favoriteGameQuery.getSingleResult();
         // Statistics
         Div statisticsDiv = new Div();
-        statisticsDiv.setText("Statystyki:");
+        statisticsDiv.setText("Stats:");
         statisticsDiv.getStyle().set("font-weight", "bold");
         statisticsDiv.getStyle().set("margin-top", "10px");
 
         // Games Played
         Div gamesPlayedDiv = new Div();
-        gamesPlayedDiv.setText("Ilość zagranych gier: " + gamesPlayed);
+        gamesPlayedDiv.setText("Games Played: " + gamesPlayed);
 
         // Favorite Game
         Div favoriteGameDiv = new Div();
-        favoriteGameDiv.setText("Ulubiona gra: " + favoriteGame);
+        favoriteGameDiv.setText("Favorite Game: " + favoriteGame);
 
         // Adding components to the user info tile
         userInfoTile.add(usernameLabel, statisticsDiv, gamesPlayedDiv, favoriteGameDiv);
@@ -122,7 +129,7 @@ public class DashboardView extends VerticalLayout {
     }
 
     private Div createUpcomingSessionsTile(Long userId) {
-        Div upcomingSessionsTile = createTile("Nadciągające sesje", "upcoming-sessions-tile");
+        Div upcomingSessionsTile = createTile("Upcoming Session", "upcoming-sessions-tile");
 
         // Fetching the next upcoming session for the user
         TypedQuery<Object[]> upcomingSessionQuery = entityManager.createQuery(
@@ -145,13 +152,13 @@ public class DashboardView extends VerticalLayout {
             String sessionName = (String) upcomingSession[0];
             LocalDateTime sessionStart = (LocalDateTime) upcomingSession[1];
 
-            H2 sessionNameLabel = new H2("Nazwa Sesji: " + sessionName);
+            H2 sessionNameLabel = new H2("Session Name: " + sessionName);
             sessionNameLabel.getStyle().set("font-size", "20px"); // Set the font size to 16px
             Paragraph sessionDateLabel = new Paragraph("Date: " + sessionStart.toLocalDate().toString());
             Paragraph sessionTimeLabel = new Paragraph("Time: " + sessionStart.toLocalTime().toString());
             upcomingSessionsTile.add(sessionNameLabel, sessionDateLabel, sessionTimeLabel);
         } else {
-            upcomingSessionsTile.add(new Paragraph("No upcoming sessions found."));
+            upcomingSessionsTile.add(new Paragraph("No Upcoming Sessions Found."));
         }
 
         return upcomingSessionsTile;
@@ -166,5 +173,24 @@ public class DashboardView extends VerticalLayout {
         tile.getStyle().set("background-color", "#ccd4df");
         tile.getStyle().set("color", "#333333");
         return tile;
+    }
+
+    private void checkAndUpdateSessionStatus(Long userId) {
+        // Fetching the sessions that are still open
+        TypedQuery<Sessions> openSessionQuery = entityManager.createQuery(
+                "SELECT s FROM Sessions s " +
+                        "WHERE s.sessionStatus = :openStatus " +
+                        "AND s.sessionStart < :currentDate",
+                Sessions.class
+        );
+        openSessionQuery.setParameter("openStatus", "OPEN");
+        openSessionQuery.setParameter("currentDate", LocalDateTime.now());
+        List<Sessions> openSessions = openSessionQuery.getResultList();
+
+        // Update the session status to "FINISHED" for the sessions that have passed
+        for (Sessions session : openSessions) {
+            session.setSessionStatus("FINISHED");
+            entityManager.persist(session);
+        }
     }
 }
