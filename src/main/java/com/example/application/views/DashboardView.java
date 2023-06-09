@@ -159,18 +159,18 @@ public class DashboardView extends VerticalLayout {
         }
 
         // Statistics
-        Div statisticsDiv = new Div();
-        statisticsDiv.setText("Stats:");
-        statisticsDiv.getStyle().set("font-weight", "bold");
-        statisticsDiv.getStyle().set("margin-top", "10px");
+        Paragraph statisticsParagraph = new Paragraph();
+        statisticsParagraph.setText("Stats:");
+        statisticsParagraph.getStyle().set("font-weight", "bold");
+        statisticsParagraph.getStyle().set("margin-top", "10px");
 
         // Games Played
-        Div gamesPlayedDiv = new Div();
-        gamesPlayedDiv.setText("Games Played: " + gamesPlayed);
+        Paragraph gamesPlayedParagraph = new Paragraph();
+        gamesPlayedParagraph.setText("Games Played: " + gamesPlayed);
 
         // Favorite Game
-        Div favoriteGameDiv = new Div();
-        favoriteGameDiv.setText("Favorite Game: " + favoriteGame);
+        Paragraph favoriteGameParagraph = new Paragraph();
+        favoriteGameParagraph.setText("Favorite Game: " + favoriteGame);
 
         userContent.add(usernameLabel,
                 statisticsParagraph,
@@ -227,17 +227,6 @@ public class DashboardView extends VerticalLayout {
         }
 
         return upcomingSessionsTile;
-    }
-
-    private Div createTile(String title, String styleClass) {
-        Div tile = new Div(new H2(title));
-        tile.addClassName(styleClass);
-        tile.getStyle().set("border", "1px solid black").set("padding", "10px");
-        tile.setWidth("100%");
-        tile.getStyle().set("font-size", "18px");
-        tile.getStyle().set("background-color", "#ccd4df");
-        tile.getStyle().set("color", "#333333");
-        return tile;
     }
 
     private void checkAndUpdateSessionStatus(Long userId) {

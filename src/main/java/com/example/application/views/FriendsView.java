@@ -218,7 +218,6 @@ public class FriendsView extends VerticalLayout {
         Grid<Users> grid = new Grid<>();
 
         // Set up the Grid columns
-        grid.addColumn(Users::getUserNick).setHeader("Nick");
         grid.addColumn(Users::getUserName).setHeader("Username");
         grid.addColumn(Users::getEmail).setHeader("Email");
 
