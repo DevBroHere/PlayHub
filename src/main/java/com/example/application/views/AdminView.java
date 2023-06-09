@@ -1,12 +1,12 @@
 package com.example.application.views;
 
-import com.example.application.data.entity.Sessions;
-import com.example.application.data.entity.Users;
-import com.example.application.data.repository.SessionRepository;
-import com.example.application.data.repository.UserRepository;
+import com.example.application.data.entity.*;
+import com.example.application.data.repository.*;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.contextmenu.GridContextMenu;
 import com.vaadin.flow.component.grid.dataview.GridListDataView;
@@ -21,10 +21,13 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.page.Page;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
+import org.apache.juli.logging.Log;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -34,8 +37,15 @@ public class AdminView extends VerticalLayout {
 
     private SessionRepository sessionRepository;
     private UserRepository userRepository;
+    private FriendshipRepository friendshipRepository;
+    private LogRepository logRepository;
+    private SessionUsersRepository sessionUsersRepository;
     @Autowired
-    public AdminView(SessionRepository sessionRepository, UserRepository userRepository) {
+    public AdminView(SessionRepository sessionRepository,
+                     UserRepository userRepository,
+                     SessionUsersRepository sessionUsersRepository,
+                     FriendshipRepository friendshipRepository,
+                     LogRepository logRepository) {
         try {
             VaadinSession.getCurrent()
                     .getAttribute(Users.class).getUserName();
@@ -44,6 +54,9 @@ public class AdminView extends VerticalLayout {
         }
         this.sessionRepository = sessionRepository;
         this.userRepository = userRepository;
+        this.sessionUsersRepository = sessionUsersRepository;
+        this.friendshipRepository = friendshipRepository;
+        this.logRepository = logRepository;
 
         setSizeFull();
         // Apply CSS styles to the body
@@ -59,7 +72,7 @@ public class AdminView extends VerticalLayout {
                 .set("width", "100%");
 
         // Logo in the Navbar
-        H2 logo = new H2("PlayHub | Admin Tools");
+        H2 logo = new H2("Admin Tools");
         logo.getStyle().set("margin", "0");
 
         // Image next to the logo
@@ -88,10 +101,12 @@ public class AdminView extends VerticalLayout {
 
         navBar.add(navContents);
 
-        Grid<Sessions> sessionsGrid = new Grid<>(Sessions.class);
+        Grid<Sessions> sessionsGrid = new Grid<>();
         sessionsGrid.addColumn(Sessions::getSessionName).setHeader("Session Name");
         sessionsGrid.addColumn(session -> session.getGame().getGameTitle()).setHeader("Game Title");
         sessionsGrid.addColumn(session -> session.getUser().getUserName()).setHeader("Session Owner");
+        sessionsGrid.addColumn(Sessions::getSessionDate).setHeader("Creation Date");
+        sessionsGrid.addColumn(Sessions::getSessionStart).setHeader("Due Date");
 
         List<Sessions> sessionsList = getSessionsList();
         GridListDataView<Sessions> dataSessionsView = sessionsGrid.setItems(sessionsList);
@@ -116,9 +131,10 @@ public class AdminView extends VerticalLayout {
             return matchesSessionName || matchesUserName;
         });
 
-        SessionsContextMenu contextMenu = new SessionsContextMenu(sessionsGrid);
+        SessionsContextMenu contextMenu = new SessionsContextMenu(sessionsGrid,
+                sessionUsersRepository, sessionRepository);
 
-        Grid<Users> usersGrid = new Grid<>(Users.class);
+        Grid<Users> usersGrid = new Grid<>();
         usersGrid.addColumn(Users::getUserName).setHeader("Username");
         usersGrid.addColumn(Users::getEmail).setHeader("Email");
         usersGrid.addColumn(Users::getUserRole).setHeader("Role");
@@ -147,7 +163,8 @@ public class AdminView extends VerticalLayout {
             return matchesUserName || matchesEmail || matchesRole;
         });
 
-        UsersContextMenu usersContextMenu = new UsersContextMenu(usersGrid);
+        UsersContextMenu usersContextMenu = new UsersContextMenu(usersGrid,
+                userRepository, friendshipRepository, logRepository);
 
         add(navBar, searchFieldSessions, sessionsGrid, searchFieldUsers, usersGrid);
     }
@@ -156,37 +173,104 @@ public class AdminView extends VerticalLayout {
         return value.toLowerCase().contains(searchTerm.toLowerCase());
     }
 
-    private static class SessionsContextMenu extends GridContextMenu<Sessions> {
-        public SessionsContextMenu(Grid<Sessions> target) {
-            super(target);
 
-            addItem("Edit", e -> e.getItem().ifPresent(session -> {
-                Notification.show("Edit: " + session.getSessionID());
+    private static class SessionsContextMenu extends GridContextMenu<Sessions> {
+        private SessionUsersRepository sessionUsersRepository;
+        private SessionRepository sessionRepository;
+        public SessionsContextMenu(Grid<Sessions> target,
+                                   SessionUsersRepository sessionUsersRepository,
+                                   SessionRepository sessionRepository) {
+            super(target);
+            this.sessionUsersRepository = sessionUsersRepository;
+            this.sessionRepository = sessionRepository;
+
+            addItem("Details", e -> e.getItem().ifPresent(session -> {
+                sessionsDetailsPopUp(session);
                 // System.out.printf("Edit: %s%n", person.getFullName());
-            }));
-            addItem("Delete", e -> e.getItem().ifPresent(session -> {
-                Notification.show("Delete: " + session.getSessionID());
-                // System.out.printf("Delete: %s%n", person.getFullName());
             }));
 
             add(new Hr());
+
+            addItem("Delete", e -> e.getItem().ifPresent(session -> {
+                Notification.show("Delete: " + session.getSessionID());
+                sessionRepository.delete(session);
+                Page page = getUI().get().getPage();
+                page.reload();
+                // System.out.printf("Delete: %s%n", person.getFullName());
+            }));
+        }
+
+        private void sessionsDetailsPopUp(Sessions session) {
+            Dialog dialog = new Dialog();
+
+            dialog.setDraggable(true);
+            dialog.setResizable(true);
+            dialog.setSizeFull();
+
+            dialog.setHeaderTitle("Session Details");
+
+            // Create the Grid
+            Grid<SessionUsers> grid = new Grid<>();
+
+            grid.addColumn(sessionUsers -> sessionUsers.getSession().getSessionName()).setHeader("Session Name");
+            grid.addColumn(sessionUsers -> sessionUsers.getUser().getUserName()).setHeader("Username");
+            grid.addColumn(sessionUsers -> sessionUsers.getUser().getEmail()).setHeader("Email");
+
+            List<SessionUsers> sessionsUsersList = getSessionUsers(session);
+            grid.setItems(sessionsUsersList);
+
+            // Add Close button to the Dialog
+            Button closeButton = new Button("Close");
+            closeButton.addClickListener(e -> dialog.close());
+
+            dialog.add(grid, closeButton);
+
+            dialog.open();
+        }
+
+        private List<SessionUsers> getSessionUsers(Sessions session){
+            return sessionUsersRepository.findAllBySession(session);
         }
     }
 
     private static class UsersContextMenu extends GridContextMenu<Users> {
-        public UsersContextMenu(Grid<Users> target) {
+        UserRepository userRepository;
+        FriendshipRepository friendshipRepository;
+        LogRepository logRepository;
+        public UsersContextMenu(Grid<Users> target,
+                                UserRepository userRepository,
+                                FriendshipRepository friendshipRepository,
+                                LogRepository logRepository) {
             super(target);
 
-            addItem("Edit", e -> e.getItem().ifPresent(user -> {
-                Notification.show("Edit: " + user.getUserName());
+            this.userRepository = userRepository;
+            this.friendshipRepository = friendshipRepository;
+
+            addItem("Change to ADMIN", e -> e.getItem().ifPresent(user -> {
+                user.setUserRole(Role.ADMIN);
+                userRepository.save(user);
+                Page page = getUI().get().getPage();
+                page.reload();
                 // System.out.printf("Edit: %s%n", person.getFullName());
             }));
-            addItem("Delete", e -> e.getItem().ifPresent(user -> {
-                Notification.show("Delete: " + user.getUserName());
-                // System.out.printf("Delete: %s%n", person.getFullName());
+
+            addItem("Change to USER", e -> e.getItem().ifPresent(user -> {
+                user.setUserRole(Role.USER);
+                userRepository.save(user);
+                Page page = getUI().get().getPage();
+                page.reload();
+                // System.out.printf("Edit: %s%n", person.getFullName());
             }));
 
             add(new Hr());
+
+            addItem("Delete", e -> e.getItem().ifPresent(user -> {
+                logRepository.deleteAll(logRepository.findAllByUser(user));
+                friendshipRepository.deleteAll(friendshipRepository.getAllFriendshipsByUser(user));
+                userRepository.delete(user);
+                Page page = getUI().get().getPage();
+                page.reload();
+            }));
         }
     }
 
@@ -195,6 +279,8 @@ public class AdminView extends VerticalLayout {
     }
 
     private List<Users> getUsersList() {
-        return userRepository.findAllNotAdmins();
+        return userRepository.findAllNotUser(VaadinSession.getCurrent().getAttribute(Users.class).getUserID());
     }
+
+
 }

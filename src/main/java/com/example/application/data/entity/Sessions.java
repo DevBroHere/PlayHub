@@ -25,7 +25,7 @@ public class Sessions {
     @JoinColumn(name = "ownerID")
     private Users user;
 
-    @OneToMany(mappedBy = "session")
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     private List<SessionUsers> sessionUsers;
 
     private String sessionName;
@@ -86,21 +86,6 @@ public class Sessions {
 
     public String getPassword() {
         return sessionPassword;
-    }
-
-    public List<Users> getSessionUsers() {
-        if (sessionUsers == null) {
-            return Collections.emptyList();
-        }
-
-        List<Users> users = new ArrayList<>();
-        for (SessionUsers sessionUser : sessionUsers) {
-            Users user = sessionUser.getUser();
-            if (user != null) {
-                users.add(user);
-            }
-        }
-        return users;
     }
 
     public void setGame(Games game) {

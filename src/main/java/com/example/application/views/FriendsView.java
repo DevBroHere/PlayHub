@@ -1,9 +1,7 @@
 package com.example.application.views;
 
 import com.example.application.data.entity.*;
-import com.example.application.data.repository.FriendshipRepository;
-import com.example.application.data.repository.LogRepository;
-import com.example.application.data.repository.UserRepository;
+import com.example.application.data.repository.*;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
@@ -34,11 +32,19 @@ public class FriendsView extends VerticalLayout {
 
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
+    private final SessionUsersRepository sessionUsersRepository;
+    private final SessionRepository sessionRepository;
     private final LogRepository logRepository;
 
-    public FriendsView(UserRepository userRepository, FriendshipRepository friendshipRepository, LogRepository logRepository) {
+    public FriendsView(UserRepository userRepository,
+                       FriendshipRepository friendshipRepository,
+                       SessionUsersRepository sessionUsersRepository,
+                       SessionRepository sessionRepository,
+                       LogRepository logRepository) {
         this.userRepository = userRepository;
         this.friendshipRepository = friendshipRepository;
+        this.sessionUsersRepository = sessionUsersRepository;
+        this.sessionRepository = sessionRepository;
         this.logRepository = logRepository;
 
         // Add friend button
@@ -147,7 +153,7 @@ public class FriendsView extends VerticalLayout {
                 } else if (Objects.equals(friendship.getFriendshipStatus(), FriendshipStatuses.WAITING.name())) {
                     Notification.show("Please wait for the response from " + friendship.getFriend().getUserName());
                 } else if (Objects.equals(friendship.getFriendshipStatus(), FriendshipStatuses.ACCEPTED.name())) {
-                    Notification.show("New Dialog window under construction.");
+                    friendSessionsPopUp(friendship);
                 } else if (Objects.equals(friendship.getFriendshipStatus(), FriendshipStatuses.DECLINED.name())) {
                     declineInfoPopUp(friendship);
                 }
@@ -163,6 +169,40 @@ public class FriendsView extends VerticalLayout {
         contentDiv.add(grid, tilesLayout);
 
         add(contentHtml, contentDiv);
+    }
+
+    private void friendSessionsPopUp(Friendships friendship) {
+        Dialog dialog = new Dialog();
+
+        dialog.setDraggable(true);
+        dialog.setResizable(true);
+        dialog.setSizeFull();
+
+        dialog.setHeaderTitle("Your friend sessions");
+
+        // Create the Grid
+        Grid<Sessions> grid = new Grid<>();
+
+        grid.addColumn(Sessions::getSessionName).setHeader("Session Name");
+        grid.addColumn(session -> session.getGame().getGameTitle()).setHeader("Game Title");
+        grid.addColumn(session -> session.getGame().getPlatformType()).setHeader("Platform Type");
+        grid.addColumn(Sessions::getSessionType).setHeader("Session Type");
+        grid.addColumn(session -> session.getUser().getUserName()).setHeader("Owner");
+
+        try {
+            List<Sessions> sessionsList = getFriendSessions(friendship.getFriend());
+            grid.setItems(sessionsList);
+        } catch (Exception e) {
+            Notification.show(friendship.getFriend().getUserName() + " does not attend any session.");
+        }
+
+        // Add Close button to the Dialog
+        Button closeButton = new Button("Close");
+        closeButton.addClickListener(e -> dialog.close());
+
+        dialog.add(grid, closeButton);
+
+        dialog.open();
     }
 
     private void openAddFriendPopUp() {
@@ -368,5 +408,10 @@ public class FriendsView extends VerticalLayout {
         // Get all friendships objects regarding the current logged user
         return friendshipRepository.findAllFriendshipsByUserId(VaadinSession.getCurrent()
                 .getAttribute(Users.class).getUserID());
+    }
+
+    private List<Sessions> getFriendSessions(Users user) {
+        List<Long> sessionIds = sessionUsersRepository.findSessionIdsByUserId(user.getUserID());
+        return sessionRepository.findSessionsBySessionIds(sessionIds);
     }
 }

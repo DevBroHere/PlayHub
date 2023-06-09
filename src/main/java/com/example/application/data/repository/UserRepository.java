@@ -27,6 +27,6 @@ public interface UserRepository extends JpaRepository<Users, Integer> {
     List<Users> findFriendActiveUsers(@Param("userId") Long userId);
 
     @Query("SELECT u FROM Users u " +
-    "WHERE u.userRole = 'USER'")
-    List<Users> findAllNotAdmins();
+    "WHERE u.userID != :userId")
+    List<Users> findAllNotUser(@Param("userId") Long userId);
 }
