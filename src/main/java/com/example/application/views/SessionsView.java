@@ -158,6 +158,7 @@ public class SessionsView extends VerticalLayout {
             }
 
             Games game = gameRepository.findFirstByGameTitleAndPlatformType(gameType, platformType);
+            Notification.show(game.getGameTitle());
 
             if (game == null) {
                 Notification.show("No game with the selected parameters found!", 3000, Notification.Position.MIDDLE);

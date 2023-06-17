@@ -1,30 +1,35 @@
 package com.example.application.views;
 
-import com.example.application.data.entity.SessionUsers;
+import com.example.application.data.entity.Games;
 import com.example.application.data.entity.Sessions;
 import com.example.application.data.entity.Users;
+import com.example.application.data.repository.GameRepository;
+import com.example.application.data.repository.SessionRepository;
+import com.example.application.data.repository.SessionUsersRepository;
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.avatar.Avatar;
-import com.vaadin.flow.component.board.Board;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.charts.Chart;
+import com.vaadin.flow.component.charts.model.*;
+import com.vaadin.flow.component.charts.model.style.SolidColor;
+import com.vaadin.flow.component.charts.model.style.Style;
 import com.vaadin.flow.component.html.*;
+import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.VaadinSession;
-import com.vaadin.flow.theme.Theme;
-import com.vaadin.flow.theme.lumo.Lumo;
-import com.vaadin.flow.theme.material.Material;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 
+import javax.swing.plaf.ListUI;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Route(value = "dashboard", layout = MainLayout.class)
 @PageTitle("Dashboard | PlayHub")
@@ -35,7 +40,16 @@ public class DashboardView extends VerticalLayout {
     private TextField name;
     private Button sayHello;
 
-    public DashboardView() {
+    private SessionRepository sessionRepository;
+    private SessionUsersRepository sessionUsersRepository;
+    private GameRepository gameRepository;
+
+    public DashboardView(SessionRepository sessionRepository, SessionUsersRepository sessionUsersRepository,
+                         GameRepository gameRepository) {
+        this.sessionRepository = sessionRepository;
+        this.sessionUsersRepository = sessionUsersRepository;
+        this.gameRepository = gameRepository;
+
         setPadding(true);
         setSpacing(true);
         // ...
@@ -85,20 +99,63 @@ public class DashboardView extends VerticalLayout {
         // Creating the upcoming sessions tile
         Div upcomingSessionsTile = createUpcomingSessionsTile(userId);
 
-        // Creating other tiles...
+        // Creating chart tile
+        Div chartStatsTile = createChartStatsTile(userId);
 
 //        // Constructing Rows
 //        HorizontalLayout firstRow = new HorizontalLayout(userInfoTile, upcomingSessionsTile);
 //        firstRow.setWidthFull();
 //        firstRow.setSpacing(true);
 
-        tilesLayout.add(userInfoTile, upcomingSessionsTile);
+        tilesLayout.add(userInfoTile, upcomingSessionsTile, chartStatsTile);
 
         // Adding Rows to the Dashboard View
         add(contentHtml, tilesLayout);
         setWidthFull();
 
-        checkAndUpdateSessionStatus(userId);
+        checkAndUpdateSessionStatus();
+    }
+
+    private Div createChartStatsTile(Long userId) {
+        Div userInfoTile = new Div();
+        userInfoTile.addClassName("info-tile");
+        userInfoTile.setWidth("100%");
+
+        List<Sessions> userSessions = sessionRepository.findSessionsBySessionIds(sessionUsersRepository.findSessionIdsByUserId(userId));
+        List<String> gamesList = gameRepository.findDistinctGameTitleOrderByGameTitle();
+        // Data section
+        List<String> userGamesList = sessionRepository.findUniqueGamesBySessionidsOrderedByGame(sessionUsersRepository.findSessionIdsByUserId(userId));
+
+        List<Integer> userGamesCountList = sessionRepository.findSessionCountBySessionIdsOrderedByGame(sessionUsersRepository.findSessionIdsByUserId(userId));
+
+        // Content of tile
+        HorizontalLayout tileContent = new HorizontalLayout();
+
+        Chart chart = new Chart(ChartType.COLUMN);
+
+        Configuration conf = chart.getConfiguration();
+
+        DataSeries dataSeries = new DataSeries();
+        dataSeries.setName("Games");
+
+        for(int i = 0; i < userGamesList.size(); i++) {
+            dataSeries.add(new DataSeriesItem(userGamesList.get(i), userGamesCountList.get(i)));
+        }
+
+        // Configure the chart
+        conf.addSeries(dataSeries);
+        conf.setTitle("Total of sessions by Game Title");
+        conf.getxAxis().setCategories(userGamesList.toArray(new String[0]));
+        conf.getyAxis().setTitle("Number of Sessions");
+        PlotOptionsColumn plotOptions = new PlotOptionsColumn();
+        plotOptions.setColorByPoint(true);
+        conf.setPlotOptions(plotOptions);
+
+        tileContent.add(chart);
+
+        userInfoTile.add(tileContent);
+
+        return userInfoTile;
     }
 
     private Div createUserInfoTile(String username, Long userId) {
@@ -229,22 +286,16 @@ public class DashboardView extends VerticalLayout {
         return upcomingSessionsTile;
     }
 
-    private void checkAndUpdateSessionStatus(Long userId) {
-        // Fetching the sessions that are still open
-        TypedQuery<Sessions> openSessionQuery = entityManager.createQuery(
-                "SELECT s FROM Sessions s " +
-                        "WHERE s.sessionStatus = :openStatus " +
-                        "AND s.sessionStart < :currentDate",
-                Sessions.class
-        );
-        openSessionQuery.setParameter("openStatus", "OPEN");
-        openSessionQuery.setParameter("currentDate", LocalDateTime.now());
-        List<Sessions> openSessions = openSessionQuery.getResultList();
 
-        // Update the session status to "FINISHED" for the sessions that have passed
-        for (Sessions session : openSessions) {
-            session.setSessionStatus("FINISHED");
-            entityManager.persist(session);
+    private void checkAndUpdateSessionStatus() {
+        // Fetching the sessions that are still open
+        List<Sessions> openSessions = sessionRepository.findSessionsBySessionStatusAndSessionStartIsSmallerThanCurrentDate();
+
+        if(!openSessions.isEmpty()) {
+            // Update the session status to "FINISHED" for the sessions that have passed
+            for (Sessions session : openSessions) {
+                session.setSessionStatus("FINISHED");
+            }
         }
     }
 }

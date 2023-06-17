@@ -22,5 +22,10 @@ public interface GameRepository extends JpaRepository<Games, Long> {
 
     Games findFirstByGameTitleAndPlatformType(String gameTitle, String platformType);
 
+    @Query("SELECT g FROM Games g WHERE g.gameID IN :gameIds")
+    List<Games> findAllByGameIDs(@Param("gameIds") List<Long> gameIds);
+
+    @Query("SELECT DISTINCT g.gameTitle FROM Games g ORDER BY g.gameTitle")
+    List<String> findDistinctGameTitleOrderByGameTitle();
 
 }
